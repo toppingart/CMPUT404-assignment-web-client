@@ -95,15 +95,11 @@ class HTTPClient(object):
         self.sendall(requestData)
 
         # listen for response from the server
-        response = self.socket.recv(1024)
-        self.socket.shutdown(socket.SHUT_WR)
-        full = ''
-        while (len(response) > 0):
-            full += response.decode()
-            response = self.socket.recv(1024)
+        response = self.recvall(self.socket)
 
-        body = self.get_body(full)
-        code = self.get_code(full)
+        body = self.get_body(response)
+        code = self.get_code(response)
+
         self.close()
         return HTTPResponse(code, body)
 
@@ -118,12 +114,8 @@ class HTTPClient(object):
                 if key != args.keys[-1]:
                     body += '&'
 
-        print(body)
-
-
         hostPart = self.get_host_port(url)
         self.connect(hostPart[0], hostPart[1]) # ip address, port
-
 
         parseUrl = urllib.parse.urlparse(url)
         contentType = "application/x-www-form-urlencoded"
@@ -132,16 +124,11 @@ class HTTPClient(object):
         self.sendall(requestData)
 
         # listen for response from the server
-        response = self.socket.recv(1024)
-        self.socket.shutdown(socket.SHUT_WR)
-        full = ''
-        while (len(response) > 0):
-            full += response.decode()
-            response = self.socket.recv(1024)
-        print(full)
+        response = self.recvall(self.socket)
 
-        code = self.get_code(full)
-        body = self.get_body(full)
+        code = self.get_code(response)
+        body = self.get_body(response)
+        self.close()
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
