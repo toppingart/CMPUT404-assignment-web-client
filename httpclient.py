@@ -47,13 +47,20 @@ class HTTPClient(object):
         return None
 
     def get_code(self, data):
-        return None
+        headersBody = data.split('\r\n\r\n')
+        return headersBody[0][9:12]
+
 
     def get_headers(self,data):
-        return None
+        # separate the headers from the body (length of list will be 2)
+        headersBody = data.split('\r\n\r\n')
+        return headersBody[0]
 
     def get_body(self, data):
-        return None
+
+        # separate the headers from the body (length of list will be 2)
+        headersBody = data.split('\r\n\r\n')
+        return headersBody[1]
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -95,16 +102,23 @@ class HTTPClient(object):
             full += response.decode()
             response = self.socket.recv(1024)
 
-
-       # a = self.recvall(self.socket)
-        print(full)
-
+        body = self.get_body(full)
+        code = self.get_code(full)
         self.close()
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
         code = 500
-        body = "title=test&body=bodytest&userId=1"
+        body = ""
+
+        # args being a dictionary
+        if args:
+           for key,value in args.items():
+                body += f'{key}={value}'
+                if key != args.keys[-1]:
+                    body += '&'
+
+        print(body)
 
 
         hostPart = self.get_host_port(url)
@@ -125,14 +139,9 @@ class HTTPClient(object):
             full += response.decode()
             response = self.socket.recv(1024)
         print(full)
-        '''
-        POST /test HTTP/1.1
-Host: foo.example
-Content-Type: application/x-www-form-urlencoded
-Content-Length: 27
 
-field1=value1&field2=value2
-        '''
+        code = self.get_code(full)
+        body = self.get_body(full)
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
@@ -149,5 +158,7 @@ if __name__ == "__main__":
         sys.exit(1)
     elif (len(sys.argv) == 3):
         print(client.command( sys.argv[2], sys.argv[1] ))
+    #elif (len(sys.argv) == 4):
+     #   print(client.command( sys.argv[2], sys.argv[1], sys.argv[3]))
     else:
         print(client.command( sys.argv[1] ))
