@@ -73,9 +73,7 @@ class HTTPClient(object):
         buffer = bytearray()
         done = False
         while not done:
-            
             part = sock.recv(1024)
-            #print(part)
             if (part):
                 buffer.extend(part)
             else:
@@ -90,13 +88,15 @@ class HTTPClient(object):
         self.connect(hostPart[0], hostPart[1]) # ip address, port
 
         parseUrl = urllib.parse.urlparse(url)
-        requestData = f"GET {parseUrl.path} HTTP/1.1\nHost: {parseUrl.hostname}\n\n"
+
+        # add host and connection (to prevent client socket from hanging)
+        requestData = f"GET {parseUrl.path} HTTP/1.1\nHost: {parseUrl.hostname}\nConnection: close\n\n"
 
         self.sendall(requestData)
-
+       
         # listen for response from the server
         response = self.recvall(self.socket)
-
+ 
         body = self.get_body(response)
         code = self.get_code(response)
 
@@ -119,7 +119,9 @@ class HTTPClient(object):
 
         parseUrl = urllib.parse.urlparse(url)
         contentType = "application/x-www-form-urlencoded"
-        requestData = f"POST {parseUrl.path} HTTP/1.1\nHost: {parseUrl.hostname}\nContent-Type: {contentType}\r\n\r\n{body}\r\n"
+
+        # add host, content-type, connection, and body
+        requestData = f"POST {parseUrl.path} HTTP/1.1\nHost: {parseUrl.hostname}\nContent-Type: {contentType}\nConnection: close\r\n\r\n{body}\r\n"
 
         self.sendall(requestData)
 
@@ -128,6 +130,7 @@ class HTTPClient(object):
 
         code = self.get_code(response)
         body = self.get_body(response)
+        
         self.close()
         return HTTPResponse(code, body)
 
