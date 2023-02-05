@@ -31,24 +31,34 @@ class HTTPResponse(object):
     def __init__(self, code=200, body=""):
         self.code = code
         self.body = body
+ 
 
 class HTTPClient(object):
     def get_host_port(self,url):
+
         parseUrl = urllib.parse.urlparse(url)
-        port = 80
+        
+        # if a port is not specified
+        if not parseUrl.port:
+            port = 80
+        else:
+            port = parseUrl.port
 
         getIpAddress = socket.gethostbyname(parseUrl.hostname)
         return (getIpAddress, port) # returns the IP address and the port
 
 
     def connect(self, host, port):
+        # create socket and connect it to host
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((host, port))
-        return None
+       
 
     def get_code(self, data):
         headersBody = data.split('\r\n\r\n')
-        return headersBody[0][9:12]
+
+        # get the status code from the first line (e.g. HTTP/1.1 200 OK)
+        return int(headersBody[0][9:12])
 
 
     def get_headers(self,data):
@@ -81,16 +91,24 @@ class HTTPClient(object):
         return buffer.decode('utf-8')
 
     def GET(self, url, args=None):
+
+        # generic error response (500)
         code = 500
         body = ""
 
-        hostPart = self.get_host_port(url)
-        self.connect(hostPart[0], hostPart[1]) # ip address, port
+        hostPort = self.get_host_port(url)
+        self.connect(hostPort[0], hostPort[1]) # ip address, port
 
         parseUrl = urllib.parse.urlparse(url)
+        path = parseUrl.path
+        hostName = parseUrl.hostname
 
-        # add host and connection (to prevent client socket from hanging)
-        requestData = f"GET {parseUrl.path} HTTP/1.1\nHost: {parseUrl.hostname}\nConnection: close\n\n"
+        # in case a path is not specified
+        if not path:
+            path = '/'
+
+        # add host and connection 
+        requestData = f"GET {path} HTTP/1.1\r\nHost: {hostName}\r\nConnection: close\r\n\r\n"
 
         self.sendall(requestData)
        
@@ -100,7 +118,7 @@ class HTTPClient(object):
         body = self.get_body(response)
         code = self.get_code(response)
 
-        self.close()
+        self.close() # close the socket
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
@@ -110,18 +128,19 @@ class HTTPClient(object):
         # args being a dictionary
         if args:
            for key,value in args.items():
-                body += f'{key}={value}'
-                if key != args.keys[-1]:
-                    body += '&'
+                body += f'{key}={value}' # key = value
+                if key != list(args.keys())[-1]: # if we're still not at the last item (i.e. more after this)
+                    body += '&' # add & in between 
 
-        hostPart = self.get_host_port(url)
-        self.connect(hostPart[0], hostPart[1]) # ip address, port
+        hostPort = self.get_host_port(url)
+        self.connect(hostPort[0], hostPort[1]) # ip address, port
 
         parseUrl = urllib.parse.urlparse(url)
         contentType = "application/x-www-form-urlencoded"
+        contentLength = len(body)
 
         # add host, content-type, connection, and body
-        requestData = f"POST {parseUrl.path} HTTP/1.1\nHost: {parseUrl.hostname}\nContent-Type: {contentType}\nConnection: close\r\n\r\n{body}\r\n"
+        requestData = f"POST {parseUrl.path} HTTP/1.1\nHost: {parseUrl.hostname}\nContent-Type: {contentType}\nConnection: close\nContent-length:{contentLength}\r\n\r\n{body}\r\n"
 
         self.sendall(requestData)
 
@@ -148,7 +167,5 @@ if __name__ == "__main__":
         sys.exit(1)
     elif (len(sys.argv) == 3):
         print(client.command( sys.argv[2], sys.argv[1] ))
-    #elif (len(sys.argv) == 4):
-     #   print(client.command( sys.argv[2], sys.argv[1], sys.argv[3]))
     else:
         print(client.command( sys.argv[1] ))
