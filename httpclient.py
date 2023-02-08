@@ -102,11 +102,31 @@ class HTTPClient(object):
         parseUrl = urllib.parse.urlparse(url)
         path = parseUrl.path
         hostName = parseUrl.hostname
+        queryDict = dict(urllib.parse.parse_qsl(parseUrl.query))
 
         # in case a path is not specified
         if not path:
             path = '/'
 
+        # add the query string to the end of path if there is one: 
+      
+        # args being a dictionary
+        if args:
+            body += '?'
+            for key,value in args.items():
+                body += f'{key}={value}' # key = value
+                if key != list(args.keys())[-1]: # if we're still not at the last item (i.e. more after this)
+                    body += '&'
+        
+        # in case no arg is provided but the query is found in the url itself
+        elif not args and len(queryDict) > 0:
+            body += '?'
+            for key,value in queryDict.items():
+                body += f'{key}={value}'
+                if key != list(queryDict.keys())[-1]: # if we're still not at the last item (i.e. more after this)
+                    body += '&'
+
+        path += body
         # add host and connection 
         requestData = f"GET {path} HTTP/1.1\r\nHost: {hostName}\r\nConnection: close\r\n\r\n"
 
