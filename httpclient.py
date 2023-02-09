@@ -80,15 +80,19 @@ class HTTPClient(object):
 
     # read everything from the socket
     def recvall(self, sock):
-        buffer = bytearray()
-        done = False
-        while not done:
-            part = sock.recv(1024)
-            if (part):
-                buffer.extend(part)
-            else:
-                done = not part
-        return buffer.decode('utf-8')
+        try:
+            buffer = bytearray()
+            done = False
+            while not done:
+                part = sock.recv(1024)
+                if (part):
+                    buffer.extend(part)
+                else:
+                    done = not part
+            return buffer.decode('utf-8')
+        except UnicodeDecodeError:
+            # in case of a decode error 
+            return buffer.decode('latin-1')
 
     def GET(self, url, args=None):
 
@@ -114,15 +118,18 @@ class HTTPClient(object):
         if args:
             body += '?'
             for key,value in args.items():
-                body += f'{key}={value}' # key = value
+
+                # handles any special characters in the query string
+                body += f'{urllib.parse.quote(key)}={urllib.parse.quote(value)}' # key = value
                 if key != list(args.keys())[-1]: # if we're still not at the last item (i.e. more after this)
                     body += '&'
         
-        # in case no arg is provided but the query is found in the url itself
+        # in case no arg is provided but the query is found in the url itself (working with a string)
         elif not args and len(queryDict) > 0:
             body += '?'
             for key,value in queryDict.items():
-                body += f'{key}={value}'
+
+                body += f'{urllib.parse.quote(key)}={urllib.parse.quote(value)}'
                 if key != list(queryDict.keys())[-1]: # if we're still not at the last item (i.e. more after this)
                     body += '&'
 
@@ -134,10 +141,9 @@ class HTTPClient(object):
        
         # listen for response from the server
         response = self.recvall(self.socket)
- 
         body = self.get_body(response)
         code = self.get_code(response)
-
+      
         self.close() # close the socket
         return HTTPResponse(code, body)
 
@@ -146,11 +152,22 @@ class HTTPClient(object):
         body = ""
 
         # args being a dictionary
-        if args:
+        if isinstance(args,dict):
            for key,value in args.items():
-                body += f'{key}={value}' # key = value
+                body += f'{urllib.parse.quote(key)}={urllib.parse.quote(value)}' # key = value
                 if key != list(args.keys())[-1]: # if we're still not at the last item (i.e. more after this)
                     body += '&' # add & in between 
+
+        # in case args is a string
+        elif isinstance(args, str):
+            queryArgs = args.split('&')
+            for i in range(0, len(queryArgs)):
+                if ' ' in queryArgs[i]:
+                    queryArgs[i] = queryArgs[i].replace(' ', '%20') # replace spaces
+
+                body += queryArgs[i]
+                if (i != len(queryArgs) - 1): # if we have not reached the end yet, add &
+                    body += '&'
 
         hostPort = self.get_host_port(url)
         self.connect(hostPort[0], hostPort[1]) # ip address, port
