@@ -115,10 +115,11 @@ class HTTPClient(object):
         # add the query string to the end of path if there is one: 
       
         # args being a dictionary
-        if args:
+        if isinstance(args,dict):
             body += '?'
             for key,value in args.items():
-
+                key = str(key)
+                value = str(value)
                 # handles any special characters in the query string
                 body += f'{urllib.parse.quote(key)}={urllib.parse.quote(value)}' # key = value
                 if key != list(args.keys())[-1]: # if we're still not at the last item (i.e. more after this)
@@ -133,6 +134,18 @@ class HTTPClient(object):
                 if key != list(queryDict.keys())[-1]: # if we're still not at the last item (i.e. more after this)
                     body += '&'
 
+        # in case args is a string
+        elif isinstance(args, str):
+            body += '?'
+            queryArgs = args.split('&')
+            for i in range(0, len(queryArgs)):
+                if ' ' in queryArgs[i]:
+                    queryArgs[i] = queryArgs[i].replace(' ', '%20') # replace spaces
+
+                body += queryArgs[i]
+                if (i != len(queryArgs) - 1): # if we have not reached the end yet, add &
+                    body += '&'
+
         path += body
         # add host and connection 
         requestData = f"GET {path} HTTP/1.1\r\nHost: {hostName}\r\nConnection: close\r\n\r\n"
@@ -141,9 +154,10 @@ class HTTPClient(object):
        
         # listen for response from the server
         response = self.recvall(self.socket)
+       
         body = self.get_body(response)
         code = self.get_code(response)
-      
+
         self.close() # close the socket
         return HTTPResponse(code, body)
 
@@ -154,6 +168,8 @@ class HTTPClient(object):
         # args being a dictionary
         if isinstance(args,dict):
            for key,value in args.items():
+                key = str(key)
+                value = str(value)
                 body += f'{urllib.parse.quote(key)}={urllib.parse.quote(value)}' # key = value
                 if key != list(args.keys())[-1]: # if we're still not at the last item (i.e. more after this)
                     body += '&' # add & in between 
@@ -173,11 +189,17 @@ class HTTPClient(object):
         self.connect(hostPort[0], hostPort[1]) # ip address, port
 
         parseUrl = urllib.parse.urlparse(url)
+        path = parseUrl.path
+        hostName = parseUrl.hostname
         contentType = "application/x-www-form-urlencoded"
         contentLength = len(body)
 
+        # in case a path is not specified
+        if not path:
+            path = '/'
+
         # add host, content-type, connection, and body
-        requestData = f"POST {parseUrl.path} HTTP/1.1\nHost: {parseUrl.hostname}\nContent-Type: {contentType}\nConnection: close\nContent-length:{contentLength}\r\n\r\n{body}\r\n"
+        requestData = f"POST {path} HTTP/1.1\nHost: {hostName}\nContent-Type: {contentType}\nConnection: close\nContent-length:{contentLength}\r\n\r\n{body}\r\n"
 
         self.sendall(requestData)
 
