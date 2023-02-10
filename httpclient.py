@@ -42,12 +42,12 @@ def help():
     print("httpclient.py [GET/POST] [URL]\n")
 
 class HTTPResponse(object):
-    def __init__(self, code=200, body="", header=""):
+    def __init__(self, code=200, body="", headers=""):
         self.code = code
         self.body = body
-        self.header = header
+        self.headers = headers
     def __str__(self):
-        return f'{self.header}\r\n\r\n{self.body}\r\n'
+        return f'{self.headers}\r\n\r\n{self.body}\r\n'
 
 class HTTPClient(object):
     def get_host_port(self,url):
@@ -74,19 +74,22 @@ class HTTPClient(object):
         headersBody = data.split('\r\n\r\n')
 
         # get the status code from the first line (e.g. HTTP/1.1 200 OK)
-        return int(headersBody[0][9:12])
+        if len(headersBody) > 0:
+            return int(headersBody[0][9:12])
 
 
     def get_headers(self,data):
         # separate the headers from the body (length of list will be 2)
         headersBody = data.split('\r\n\r\n')
-        return headersBody[0]
+        if len(headersBody) > 0:
+            return headersBody[0]
 
     def get_body(self, data):
 
         # separate the headers from the body (length of list will be 2)
         headersBody = data.split('\r\n\r\n')
-        return headersBody[1]
+        if len(headersBody) > 1:
+            return headersBody[1]
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -145,7 +148,7 @@ class HTTPClient(object):
         elif not args and len(queryDict) > 0:
             body += '?'
             for key,value in queryDict.items():
-
+                # taking care of special characters
                 body += f'{urllib.parse.quote(key)}={urllib.parse.quote(value)}'
                 if key != list(queryDict.keys())[-1]: # if we're still not at the last item (i.e. more after this)
                     body += '&'
@@ -174,14 +177,30 @@ class HTTPClient(object):
  
         body = self.get_body(response)
         code = self.get_code(response)
-        header = self.get_headers(response)
+        headers = self.get_headers(response)
 
         self.close() # close the socket
-        return HTTPResponse(code, body, header)
+        return HTTPResponse(code, body, headers)
 
     def POST(self, url, args=None):
         code = 500
         body = ""
+
+        parseUrl = urllib.parse.urlparse(url)
+        path = parseUrl.path
+        hostName = parseUrl.hostname
+        queryDict = dict(urllib.parse.parse_qsl(parseUrl.query))
+
+        query = ""
+
+        # in case there is a query string at the end of the url
+        if len(queryDict) > 0:
+            query += '?'
+            for key,value in queryDict.items():
+                # taking care of special characters
+                query += f'{urllib.parse.quote(key)}={urllib.parse.quote(value)}'
+                if key != list(queryDict.keys())[-1]: # if we're still not at the last item (i.e. more after this)
+                    query += '&'
 
         # args being a dictionary
         if isinstance(args,dict):
@@ -206,9 +225,6 @@ class HTTPClient(object):
         hostPort = self.get_host_port(url)
         self.connect(hostPort[0], hostPort[1]) # ip address, port
 
-        parseUrl = urllib.parse.urlparse(url)
-        path = parseUrl.path
-        hostName = parseUrl.hostname
         contentType = "application/x-www-form-urlencoded"
         contentLength = len(body)
 
@@ -216,6 +232,7 @@ class HTTPClient(object):
         if not path:
             path = '/'
 
+        path += query
         # add host, content-type, connection, and body
         requestData = f"POST {path} HTTP/1.1\nHost: {hostName}\nContent-Type: {contentType}\nConnection: close\nContent-length:{contentLength}\r\n\r\n{body}\r\n"
 
@@ -226,10 +243,10 @@ class HTTPClient(object):
     
         code = self.get_code(response)
         body = self.get_body(response)
-        header = self.get_headers(response)
+        headers = self.get_headers(response)
       
         self.close()
-        return HTTPResponse(code, body, header)
+        return HTTPResponse(code, body, headers)
 
     def command(self, url, command="GET", args=None):
         if (command == "POST"):
