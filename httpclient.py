@@ -42,9 +42,12 @@ def help():
     print("httpclient.py [GET/POST] [URL]\n")
 
 class HTTPResponse(object):
-    def __init__(self, code=200, body=""):
+    def __init__(self, code=200, body="", header=""):
         self.code = code
         self.body = body
+        self.header = header
+    def __str__(self):
+        return f'{self.header}\r\n\r\n{self.body}\r\n'
 
 class HTTPClient(object):
     def get_host_port(self,url):
@@ -168,13 +171,13 @@ class HTTPClient(object):
        
         # listen for response from the server
         response = self.recvall(self.socket)
-        print(response)
-
+ 
         body = self.get_body(response)
         code = self.get_code(response)
+        header = self.get_headers(response)
 
         self.close() # close the socket
-        return HTTPResponse(code, body)
+        return HTTPResponse(code, body, header)
 
     def POST(self, url, args=None):
         code = 500
@@ -220,13 +223,13 @@ class HTTPClient(object):
 
         # listen for response from the server
         response = self.recvall(self.socket)
-        print(response)
-
+    
         code = self.get_code(response)
         body = self.get_body(response)
-        
+        header = self.get_headers(response)
+      
         self.close()
-        return HTTPResponse(code, body)
+        return HTTPResponse(code, body, header)
 
     def command(self, url, command="GET", args=None):
         if (command == "POST"):
