@@ -18,6 +18,20 @@
 # Write your own HTTP GET and POST
 # The point is to understand what you have to send and get experience with it
 
+'''
+External sources used:
+(Used to give me an idea on how to approach parsing the query string)
+
+1. ahuigo's implementation, licensed under 
+Creative Commons-Attribution-ShareAlike 4.0 (CC-BY-SA 4.0), found on Stack Overflow (https://stackoverflow.com/)
+Title of question: Best way to parse a URL query string
+Year: 2012
+Link to site where implementation was found: https://stackoverflow.com/questions/10113090/best-way-to-parse-a-url-query-string
+Link to author (in this case, the person who asked the question): https://stackoverflow.com/users/972376/egoskeptical
+Link to author (in this case, the person who answered the question and provided the implementation idea): https://stackoverflow.com/users/2140757/ahuigo
+Link to license: https://creativecommons.org/licenses/by-sa/4.0/
+'''
+
 import sys
 import socket
 import re
