@@ -45,7 +45,6 @@ class HTTPResponse(object):
     def __init__(self, code=200, body=""):
         self.code = code
         self.body = body
- 
 
 class HTTPClient(object):
     def get_host_port(self,url):
@@ -154,13 +153,14 @@ class HTTPClient(object):
             queryArgs = args.split('&')
             for i in range(0, len(queryArgs)):
                 if ' ' in queryArgs[i]:
-                    queryArgs[i] = queryArgs[i].replace(' ', '%20') # replace spaces
+                    queryArgs[i] = queryArgs[i].replace(' ', '+') # replace spaces
 
                 body += queryArgs[i]
                 if (i != len(queryArgs) - 1): # if we have not reached the end yet, add &
                     body += '&'
 
         path += body
+       
         # add host and connection 
         requestData = f"GET {path} HTTP/1.1\r\nHost: {hostName}\r\nConnection: close\r\n\r\n"
 
@@ -168,7 +168,8 @@ class HTTPClient(object):
        
         # listen for response from the server
         response = self.recvall(self.socket)
-       
+        print(response)
+
         body = self.get_body(response)
         code = self.get_code(response)
 
@@ -193,7 +194,7 @@ class HTTPClient(object):
             queryArgs = args.split('&')
             for i in range(0, len(queryArgs)):
                 if ' ' in queryArgs[i]:
-                    queryArgs[i] = queryArgs[i].replace(' ', '%20') # replace spaces
+                    queryArgs[i] = queryArgs[i].replace(' ', '+') # replace spaces
 
                 body += queryArgs[i]
                 if (i != len(queryArgs) - 1): # if we have not reached the end yet, add &
@@ -219,6 +220,7 @@ class HTTPClient(object):
 
         # listen for response from the server
         response = self.recvall(self.socket)
+        print(response)
 
         code = self.get_code(response)
         body = self.get_body(response)
